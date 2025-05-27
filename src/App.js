@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react'; // Added useCallback
 
 // Main App component for the math game
 function App() {
@@ -16,6 +16,59 @@ function App() {
   const timerRef = useRef(null);
   // useRef to the answer input field for auto-focusing
   const answerInputRef = useRef(null);
+
+  // Function to generate a random math problem based on selected type
+  // Wrapped with useCallback to prevent unnecessary re-creation and avoid ESLint warnings
+  const generateProblem = useCallback(() => {
+    let num1 = Math.floor(Math.random() * 10) + 1; // Random number between 1 and 10
+    let num2 = Math.floor(Math.random() * 10) + 1; // Random number between 1 and 10
+    let operator;
+    let answer;
+
+    // Define available operators based on the problemType
+    const operators = [];
+    if (problemType === 'addition' || problemType === 'random') operators.push('+');
+    if (problemType === 'subtraction' || problemType === 'random') operators.push('-');
+    if (problemType === 'multiplication' || problemType === 'random') operators.push('*');
+    if (problemType === 'division' || problemType === 'random') operators.push('/');
+
+    // Select a random operator from the allowed ones
+    operator = operators[Math.floor(Math.random() * operators.length)];
+
+    // Calculate the correct answer based on the operator
+    switch (operator) {
+      case '+':
+        answer = num1 + num2;
+        break;
+      case '-':
+        // Ensure num1 is greater than or equal to num2 for positive subtraction results
+        if (num1 < num2) {
+          [num1, num2] = [num2, num1]; // Swap num1 and num2
+        }
+        answer = num1 - num2;
+        break;
+      case '*':
+        answer = num1 * num2;
+        break;
+      case '/':
+        // Corrected division logic: Ensure division results in a whole number
+        // Pick a desired result (C) and a divisor (B), then calculate dividend (A = C * B)
+        const resultC = Math.floor(Math.random() * 9) + 2; // Result between 2 and 10
+        const divisorB = Math.floor(Math.random() * 9) + 2; // Divisor between 2 and 10
+        const dividendA = resultC * divisorB; // Calculate dividend
+
+        num1 = dividendA;
+        num2 = divisorB;
+        answer = resultC;
+        break;
+      default:
+        // Fallback for unexpected operator, though should not happen with defined types
+        operator = '+';
+        answer = num1 + num2;
+        break;
+    }
+    setCurrentProblem({ num1, num2, operator, answer });
+  }, [problemType]); // Dependency for useCallback: generateProblem depends on problemType
 
   // useEffect hook to manage the game timer
   useEffect(() => {
@@ -63,55 +116,7 @@ function App() {
         answerInputRef.current.focus();
       }
     }
-  }, [gameStarted, isGameOver, problemType]); // Dependencies: re-run if game state or problem type changes
-
-  // Function to generate a random math problem based on selected type
-  const generateProblem = () => {
-    let num1 = Math.floor(Math.random() * 10) + 1; // Random number between 1 and 10
-    let num2 = Math.floor(Math.random() * 10) + 1; // Random number between 1 and 10
-    let operator;
-    let answer;
-
-    // Define available operators based on the problemType
-    const operators = [];
-    if (problemType === 'addition' || problemType === 'random') operators.push('+');
-    if (problemType === 'subtraction' || problemType === 'random') operators.push('-');
-    if (problemType === 'multiplication' || problemType === 'random') operators.push('*');
-    if (problemType === 'division' || problemType === 'random') operators.push('/');
-
-    // Select a random operator from the allowed ones
-    operator = operators[Math.floor(Math.random() * operators.length)];
-
-    // Calculate the correct answer based on the operator
-    switch (operator) {
-      case '+':
-        answer = num1 + num2;
-        break;
-      case '-':
-        // Ensure num1 is greater than or equal to num2 for positive subtraction results
-        if (num1 < num2) {
-          [num1, num2] = [num2, num1]; // Swap num1 and num2
-        }
-        answer = num1 - num2;
-        break;
-      case '*':
-        answer = num1 * num2;
-        break;
-      case '/':
-        // For division, ensure the first number is a multiple of the second
-        // to get a whole number answer
-        const product = num1 * num2; // Create a product to ensure whole number division
-        num1 = product; // Set num1 to the product
-        answer = num1 / num2;
-        break;
-      default:
-        // Fallback for unexpected operator, though should not happen with defined types
-        operator = '+';
-        answer = num1 + num2;
-        break;
-    }
-    setCurrentProblem({ num1, num2, operator, answer });
-  };
+  }, [gameStarted, isGameOver, problemType, generateProblem]); // Added generateProblem to dependencies
 
   // Function to handle the user's answer submission
   const handleAnswerSubmit = (e) => {
